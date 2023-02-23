@@ -1,0 +1,123 @@
+---
+title: "304 project"
+author: '2111141'
+date: '2022-04-28'
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE, comment=NA, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library("lubridate")
+library("ggplot2")
+library("dsEssex")
+library("tidyverse")
+library("reshape2")
+library("RColorBrewer")
+p_data <- read.csv("C:/Users/44747/Downloads/37-00049_UOF-P_2016_prepped (1).csv", header =  TRUE)
+```
+
+## INTRODUCTION
+
+This is a project that involves analyzing a police data-set from Dallas in 2016. Which is available an the source from  <https://www.kaggle.com/datasets/center-for-policing-equity/data-science-for-good>.
+
+The data was cleaned by changing some variable structures, examples SUBJECT_DATE to a date format, time was formatted to represent the hour of the day. This analysis aims to look at the selected crimes description such as mentally unstable, Marijuana, Drugs, Alcohol and unknown drugs. I also looked at the subject race that was mostly arrested by various officers race that made most arrest. Further analysis was also done on time series, showing most crimes per hour, and month.
+
+
+## ANALYSIS
+
+```{r}
+attach(p_data)
+p_data = p_data[2:2384,]
+p_data$adj_date <- as.Date(p_data$INCIDENT_DATE,format = "%m/%d/%y" )
+glimpse(p_data)
+```
+
+
+##  Plots
+
+The plot below shows the numbers 0f subject_race that was arrested the most by specific race of each officers, which tuned to be black with more number of arrest by white officers, followed by hisapnic, the plot also showed that Asians has the of both police officers and crime rate.
+
+```{r}
+g <- p_data %>%  
+  count(OFFICER_RACE, SUBJECT_RACE) %>%
+  ggplot(aes(x=OFFICER_RACE,y= n, fill = SUBJECT_RACE)) + 
+  geom_col(alpha =0.75) +
+  theme_bw() + xlab("Officer race") + ylab("counts of crime") + ggtitle("Crime counts ~ Subject race")
+ggplotly(g)
+```
+
+
+
+##2
+
+Furthermore, I filtered subject description of  crimes to Marijuana, Drugs, Mentally unstable and, alcohol and unknown drugs, the visualization shows that most blacks that are Mentally unstable as described by these officers were mostly arrested, followed by the whites and hispanic. The hispanic and hispanic race was arrested more with drugs, blacks more arrest with alcohol. 
+
+
+```{r pressure, echo=FALSE}
+h <-p_data %>%  
+  filter(SUBJECT_DESCRIPTION %in% c('Alchohol and unknown drugs', 'Alchohol', 'Marijuana', 'Mentally unstable')) %>% 
+  group_by(SUBJECT_RACE, SUBJECT_DESCRIPTION) %>%
+  ggplot(aes(x=SUBJECT_DESCRIPTION, fill = SUBJECT_RACE)) +
+  geom_bar(position = "dodge", alpha= 0.75)
+ggplotly(h)
+```
+
+
+## Plot 3
+
+
+This plot shows the  probability of an arrest made by subject description by officers.
+
+```{r}
+y <-p_data %>% 
+  filter(SUBJECT_DESCRIPTION %in% c('Alchohol and unknown drugs', 'Alchohol', 'Marijuana', 'Mentally unstable')) %>%
+  group_by(SUBJECT_DESCRIPTION,SUBJECT_WAS_ARRESTED)%>%
+  ggplot(aes(y=SUBJECT_DESCRIPTION)) +
+  geom_bar(aes(fill = SUBJECT_DESCRIPTION)) +
+  facet_wrap(~ SUBJECT_WAS_ARRESTED) +
+  theme_bw() +
+  ylab("subject description") +xlab("counts on crime") + ggtitle(" Crimes by arrest") +theme_bw()
+ggplotly(y)
+```
+
+## Time Series
+
+This plots shows date per number of crimes, according to the plot most crime was committed in October, followed by between February and March and also between June and July.  
+```{r}
+grouped_time_data<- p_data %>% group_by( adj_date) %>% summarise( counts= n())
+
+t <- ggplot(data = grouped_time_data, aes(x = adj_date,y = counts)) +
+  geom_line(color= "coral4")+
+  stat_smooth(method = "loess", formula = y~x, size= 1)+
+  scale_x_date(date_labels ="%B", date_breaks = "1 month") +
+  xlab("MONTHS") + ylab("FREQUENCIES") +
+  ggtitle("Frequency of incidents per month") +
+  theme_bw()
+  ggplotly (t)
+
+```
+## Time Series per hour
+
+This plots shows the rate of crimes and arrest carried out during each period of the day. As seen most crimes and arrest are done in the late hours of the night. From 16:00-22:00, and a bit higher during the early hours of the day.
+
+ 
+```{r}
+p_data$INCIDENT_TIME <- format(strptime(p_data$INCIDENT_TIME, "%I:%M:%S %p"), "%H:%M:%S")
+ 
+ p_data$INCIDENT_HOUR <- as.numeric(substr(p_data$INCIDENT_TIME, 0, 2))
+ 
+ p_data$INC_hour <- substr(p_data$INCIDENT_TIME, 0, 2)
+p_data_hour_n <- p_data %>% group_by(INC_hour) %>% summarize(avg= n())
+ 
+ r <- ggplot(p_data_hour_n,aes(x=INC_hour,y= avg, group= "count")) +      geom_line(size=1,colour ="red") +  
+   xlab( "Hours")+ ylab("Frequency")+ ggtitle("Frequency crimes ~ Hour") +
+   geom_area(alpha= 0.4,position = "identity", color="coral4") +
+   theme_bw() +
+   theme(axis.text = element_text(angle = -90,vjust = 0.5)) +
+    theme_bw()
+ ggplotly(r)
+```
+
+## Conclusion
+
+From the analysis above, blacks are more associated with crime in Dallas, even more, white officers are usually kin on arresting blacks, probably due to their high association with crimes, this should be subjected to  further analysis.
